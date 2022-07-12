@@ -13,40 +13,37 @@ module Cardano.Ledger.Babbage.Scripts where
 import Cardano.Ledger.Alonzo.Data (Data)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (getSpendingTxIn)
 import Cardano.Ledger.Alonzo.Tx
-  ( ScriptPurpose (..),
+  ( AlonzoEraTx,
     AlonzoTx (..),
+    ScriptPurpose (..),
     isTwoPhaseScriptAddressFromMap,
-    txdats',
   )
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness, unTxDats)
+import Cardano.Ledger.Alonzo.TxWitness (AlonzoEraWitnesses (datsWitsL), unTxDats)
 import Cardano.Ledger.Babbage.TxBody
-  ( Datum (..),
-    TxOut (..),
-    txOutData,
-    txOutDataHash,
+  ( BabbageEraTxBody (..),
+    BabbageEraTxOut (..),
+    BabbageTxOut (..),
+    Datum (..),
+    dataHashTxOutL,
   )
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript (hashScript))
-import Cardano.Ledger.Hashes (DataHash)
-import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Applicative ((<|>))
 import Control.SetAlgebra (eval, (◁))
 import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
+import Data.Maybe.Strict (StrictMaybe (SJust, SNothing), strictMaybeToMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import GHC.Records (HasField (..))
+import Lens.Micro ((^.))
 
--- | Extract binary data either directly from the `Core.Tx` as an "inline datum"
+-- | Extract binary data either directly from the `Tx` as an "inline datum"
 -- or look it up in the witnesses by the hash.
 getDatumBabbage ::
-  ( Era era,
-    Core.TxOut era ~ TxOut era,
-    Core.Witnesses era ~ TxWitness era
+  ( AlonzoEraTx era,
+    BabbageEraTxOut era
   ) =>
-  Core.Tx era ->
+  Tx era ->
   UTxO era ->
   ScriptPurpose (Crypto era) ->
   Maybe (Data era)
@@ -54,9 +51,9 @@ getDatumBabbage tx (UTxO m) sp = do
   txIn <- getSpendingTxIn sp
   txOut <- Map.lookup txIn m
   let txOutDataFromWits = do
-        hash <- txOutDataHash txOut
-        Map.lookup hash (unTxDats (txdats' (getField @"wits" tx)))
-  txOutData txOut <|> txOutDataFromWits
+        hash <- strictMaybeToMaybe (txOut ^. dataHashTxOutL)
+        Map.lookup hash (unTxDats (tx ^. witsTxL . datsWitsL))
+  strictMaybeToMaybe (txOut ^. dataTxOutL) <|> txOutDataFromWits
 
 -- Figure 3 of the Specification
 {- txscripts tx utxo = txwitscripts tx ∪ {hash s ↦ s | ( , , , s) ∈ utxo (spendInputs tx ∪ refInputs tx)} -}
@@ -92,33 +89,32 @@ getDatumBabbage tx (UTxO m) sp = do
 
 babbageTxScripts ::
   forall era.
-  ( ValidateScript era,
-    HasField "referenceScript" (Core.TxOut era) (StrictMaybe (Core.Script era)),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "referenceInputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+  ( EraTx era,
+    ValidateScript era,
+    BabbageEraTxBody era
   ) =>
   UTxO era ->
-  Core.Tx era ->
-  Map.Map (ScriptHash (Crypto era)) (Core.Script era)
+  Tx era ->
+  Map.Map (ScriptHash (Crypto era)) (Script era)
 babbageTxScripts utxo tx = ans
   where
-    txbody = getField @"body" tx
-    ins = getField @"referenceInputs" txbody `Set.union` getField @"inputs" txbody
-    ans = Map.union (refScripts ins utxo) (getField @"scriptWits" tx)
+    txBody = tx ^. bodyTxL
+    ins = (txBody ^. referenceInputsTxBodyL) `Set.union` (txBody ^. inputsTxBodyL)
+    ans = refScripts ins utxo `Map.union` (tx ^. witsTxL . scriptWitsL)
 
 -- | Collect all the reference scripts found in the TxOuts, pointed to by some input.
 refScripts ::
   forall era.
-  (ValidateScript era, HasField "referenceScript" (Core.TxOut era) (StrictMaybe (Core.Script era))) =>
+  (ValidateScript era, BabbageEraTxOut era) =>
   Set (TxIn (Crypto era)) ->
   UTxO era ->
-  Map.Map (ScriptHash (Crypto era)) (Core.Script era)
+  Map.Map (ScriptHash (Crypto era)) (Script era)
 refScripts ins (UTxO mp) = Map.foldl' accum Map.empty (eval (ins ◁ mp))
   where
-    accum ans txout =
-      case getField @"referenceScript" txout of
+    accum ans txOut =
+      case txOut ^. referenceScriptTxOutL of
         SNothing -> ans
-        (SJust script) -> Map.insert (hashScript @era script) script ans
+        SJust script -> Map.insert (hashScript @era script) script ans
 
 -- Compute two sets for all TwoPhase scripts in a Tx.
 -- set 1) DataHashes for each Two phase Script in a TxIn that has a DataHash
@@ -128,31 +124,31 @@ refScripts ins (UTxO mp) = Map.foldl' accum Map.empty (eval (ins ◁ mp))
 {- { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isNonNativeScriptAddress tx a} -}
 babbageInputDataHashes ::
   forall era.
-  ( HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+  ( EraTxBody era,
     ValidateScript era,
-    Core.TxOut era ~ TxOut era
+    TxOut era ~ BabbageTxOut era
   ) =>
-  Map.Map (ScriptHash (Crypto era)) (Core.Script era) ->
+  Map.Map (ScriptHash (Crypto era)) (Script era) ->
   AlonzoTx era ->
   UTxO era ->
   (Set (DataHash (Crypto era)), Set (TxIn (Crypto era)))
 babbageInputDataHashes hashScriptMap tx (UTxO mp) =
   Map.foldlWithKey' accum (Set.empty, Set.empty) smallUtxo
   where
-    txbody = body tx
-    spendinputs = getField @"inputs" txbody :: Set (TxIn (Crypto era))
-    smallUtxo = eval (spendinputs ◁ mp)
+    txBody = body tx
+    spendInputs = txBody ^. inputsTxBodyL
+    smallUtxo = eval (spendInputs ◁ mp)
     accum ans@(!hashSet, !inputSet) txin txout =
       case txout of
-        TxOut addr _ NoDatum _ ->
+        BabbageTxOut addr _ NoDatum _ ->
           if isTwoPhaseScriptAddressFromMap @era hashScriptMap addr
             then (hashSet, Set.insert txin inputSet)
             else ans
-        TxOut addr _ (DatumHash dhash) _ ->
+        BabbageTxOut addr _ (DatumHash dhash) _ ->
           if isTwoPhaseScriptAddressFromMap @era hashScriptMap addr
             then (Set.insert dhash hashSet, inputSet)
             else ans
         -- Though it is somewhat odd to allow non-two-phase-scripts to include a datum,
         -- the Alonzo era already set the precedent with datum hashes, and several dapp
         -- developers see this as a helpful feature.
-        TxOut _ _ (Datum _) _ -> ans
+        BabbageTxOut _ _ (Datum _) _ -> ans

@@ -286,7 +286,7 @@ scriptsNotValidateTransition = do
 
       {- utxoKeep = getField @"collateral" txb ⋪ utxo -}
       {- utxoDel  = getField @"collateral" txb ◁ utxo -}
-      !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralTxBodyL)
+      !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
   pure
     $! us
       { _utxo = UTxO utxoKeep,

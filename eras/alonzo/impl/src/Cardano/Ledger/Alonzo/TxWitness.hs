@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE StrictData #-}
@@ -38,6 +39,11 @@ module Cardano.Ledger.Alonzo.TxWitness
         txdats',
         txrdmrs'
       ),
+    addrAlonzoWitsL,
+    bootAddrAlonzoWitsL,
+    scriptAlonzoWitsL,
+    datsAlonzoWitsL,
+    rdmrsAlonzoWitsL,
     AlonzoEraWitnesses (..),
     unTxDats,
     nullDats,
@@ -337,33 +343,52 @@ mkAlonzoTxWitness = TxWitnessConstr . memoBytes . encodeWitnessRaw
 -- =======================================================
 
 lensWitsRaw ::
-  ( Era era,
-    Core.Script era ~ AlonzoScript era,
-    Functor f
-  ) =>
+  (Era era, Core.Script era ~ AlonzoScript era) =>
   (TxWitnessRaw e -> a) ->
   (TxWitnessRaw e -> t -> TxWitnessRaw era) ->
-  (a -> f t) ->
-  TxWitness e ->
-  f (TxWitness era)
+  Lens (TxWitness e) (TxWitness era) a t
 lensWitsRaw getter setter =
   lens
     (\(TxWitnessConstr (Memo witsRaw _)) -> getter witsRaw)
     (\(TxWitnessConstr (Memo witsRaw _)) val -> mkAlonzoTxWitness $ setter witsRaw val)
 
+addrAlonzoWitsL ::
+  (Era era, Core.Script era ~ AlonzoScript era) =>
+  Lens' (TxWitness era) (Set (WitVKey 'Witness (Crypto era)))
+addrAlonzoWitsL =
+  lensWitsRaw _txwitsVKey (\witsRaw addrWits -> witsRaw {_txwitsVKey = addrWits})
+
+bootAddrAlonzoWitsL ::
+  (Era era, Core.Script era ~ AlonzoScript era) =>
+  Lens' (TxWitness era) (Set (BootstrapWitness (Crypto era)))
+bootAddrAlonzoWitsL =
+  lensWitsRaw _txwitsBoot (\witsRaw bootAddrWits -> witsRaw {_txwitsBoot = bootAddrWits})
+
+scriptAlonzoWitsL ::
+  (Era era, Core.Script era ~ AlonzoScript era) =>
+  Lens' (TxWitness era) (Map (ScriptHash (Crypto era)) (Script era))
+scriptAlonzoWitsL =
+  lensWitsRaw _txscripts (\witsRaw scriptWits -> witsRaw {_txscripts = scriptWits})
+
+datsAlonzoWitsL ::
+  (Era era, Core.Script era ~ AlonzoScript era) =>
+  Lens' (TxWitness era) (TxDats era)
+datsAlonzoWitsL =
+  lensWitsRaw _txdats (\witsRaw datsWits -> witsRaw {_txdats = datsWits})
+
+rdmrsAlonzoWitsL ::
+  (Era era, Core.Script era ~ AlonzoScript era) =>
+  Lens' (TxWitness era) (Redeemers era)
+rdmrsAlonzoWitsL =
+  lensWitsRaw _txrdmrs (\witsRaw rdmrsWits -> witsRaw {_txrdmrs = rdmrsWits})
+
 instance CC.Crypto c => EraWitnesses (AlonzoEra c) where
   type Witnesses (AlonzoEra c) = TxWitness (AlonzoEra c)
 
   mkBasicWitnesses = mempty
-
-  addrWitsL =
-    lensWitsRaw _txwitsVKey (\witsRaw addrWits -> witsRaw {_txwitsVKey = addrWits})
-
-  bootAddrWitsL =
-    lensWitsRaw _txwitsBoot (\witsRaw bootAddrWits -> witsRaw {_txwitsBoot = bootAddrWits})
-
-  scriptWitsL =
-    lensWitsRaw _txscripts (\witsRaw scriptWits -> witsRaw {_txscripts = scriptWits})
+  addrWitsL = addrAlonzoWitsL
+  bootAddrWitsL = bootAddrAlonzoWitsL
+  scriptWitsL = scriptAlonzoWitsL
 
 class EraWitnesses era => AlonzoEraWitnesses era where
   datsWitsL :: Lens' (Witnesses era) (TxDats era)
@@ -371,11 +396,8 @@ class EraWitnesses era => AlonzoEraWitnesses era where
   rdmrsWitsL :: Lens' (Witnesses era) (Redeemers era)
 
 instance CC.Crypto c => AlonzoEraWitnesses (AlonzoEra c) where
-  datsWitsL =
-    lensWitsRaw _txdats (\witsRaw datsWits -> witsRaw {_txdats = datsWits})
-
-  rdmrsWitsL =
-    lensWitsRaw _txrdmrs (\witsRaw rdmrsWits -> witsRaw {_txrdmrs = rdmrsWits})
+  datsWitsL = datsAlonzoWitsL
+  rdmrsWitsL = rdmrsAlonzoWitsL
 
 --------------------------------------------------------------------------------
 -- Serialisation

@@ -108,26 +108,6 @@ instance (ShelleyEraCrypto c) => API.ApplyTx (BabbageEra c) where
 
 instance ShelleyEraCrypto c => API.ApplyBlock (BabbageEra c)
 
-instance ShelleyEraCrypto c => API.ShelleyBasedEra (BabbageEra c)
-
--- | The Babbage era
-data BabbageEra c
-
-instance
-  ( CC.Crypto c
-  ) =>
-  EraModule.Era (BabbageEra c)
-  where
-  type Crypto (BabbageEra c) = c
-
-  getTxOutEitherAddr = getBabbageTxOutEitherAddr
-
-  getAllTxInputs txb = spending `Set.union` collateral `Set.union` reference
-    where
-      spending = getField @"inputs" txb
-      collateral = getField @"collateral" txb
-      reference = getField @"referenceInputs" txb
-
 instance (CC.Crypto c) => Shelley.ValidateScript (BabbageEra c) where
   isNativeScript x = not (isPlutusScript x)
   scriptPrefixTag script =
@@ -193,34 +173,6 @@ instance CC.Crypto c => API.CLI (BabbageEra c) where
 
   evaluateMinLovelaceOutput pp out = babbageMinUTxOValue pp (mkSized out)
 
-type instance Tx (BabbageEra c) = AlonzoTx (BabbageEra c)
-type instance TxOut (BabbageEra c) = BabbageTxOut (BabbageEra c)
-type instance TxBody (BabbageEra c) = BabbageTxBody (BabbageEra c)
-type instance Value (BabbageEra c) = MaryValue c
-type instance Script (BabbageEra c) = AlonzoScript (BabbageEra c)
-type instance AuxiliaryData (BabbageEra c) = AlonzoAuxiliaryData (BabbageEra c)
-type instance PParams (BabbageEra c) = BabbagePParams (BabbageEra c)
-type instance Witnesses (BabbageEra c) = AlonzoTxWitness (BabbageEra c)
-type instance PParamsDelta (BabbageEra c) = BabbagePParamsUpdate (BabbageEra c)
-
-instance CC.Crypto c => UsesValue (BabbageEra c)
-
-instance (CC.Crypto c) => UsesPParams (BabbageEra c) where
-  mergePPUpdates _ = updatePParams
-
-instance CC.Crypto c => ValidateAuxiliaryData (BabbageEra c) c where
-  hashAuxiliaryData x = AuxiliaryDataHash (hashAnnotated x)
-  validateAuxiliaryData pv (AuxiliaryData metadata scrips) =
-    all validMetadatum metadata
-      && all (validScript pv) scrips
-
-instance CC.Crypto c => EraModule.SupportsSegWit (BabbageEra c) where
-  type TxSeq (BabbageEra c) = Alonzo.TxSeq (BabbageEra c)
-  fromTxSeq = Alonzo.txSeqTxns
-  toTxSeq = Alonzo.TxSeq
-  hashTxSeq = Alonzo.hashTxSeq
-  numSegComponents = 4
-
 instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
   txInfo = babbageTxInfo
   inputDataHashes = babbageInputDataHashes
@@ -238,56 +190,6 @@ instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
       collOuts = case getField @"sizedCollateralReturn" txbody of
         SNothing -> []
         SJust x -> [x]
-
--------------------------------------------------------------------------------
--- Era Mapping
--------------------------------------------------------------------------------
-
--- Rules inherited from Alonzo
-
-type instance Core.EraRule "UTXOS" (BabbageEra c) = BabbageUTXOS (BabbageEra c)
-
-type instance Core.EraRule "UTXO" (BabbageEra c) = BabbageUTXO (BabbageEra c)
-
-type instance Core.EraRule "UTXOW" (BabbageEra c) = BabbageUTXOW (BabbageEra c)
-
-type instance Core.EraRule "LEDGER" (BabbageEra c) = BabbageLEDGER (BabbageEra c)
-
-type instance Core.EraRule "BBODY" (BabbageEra c) = Alonzo.AlonzoBBODY (BabbageEra c)
-
--- Rules inherited from Shelley
-
-type instance Core.EraRule "DELEG" (BabbageEra c) = API.DELEG (BabbageEra c)
-
-type instance Core.EraRule "DELEGS" (BabbageEra c) = API.DELEGS (BabbageEra c)
-
-type instance Core.EraRule "DELPL" (BabbageEra c) = API.DELPL (BabbageEra c)
-
-type instance Core.EraRule "EPOCH" (BabbageEra c) = Shelley.EPOCH (BabbageEra c)
-
-type instance Core.EraRule "LEDGERS" (BabbageEra c) = API.LEDGERS (BabbageEra c)
-
-type instance Core.EraRule "MIR" (BabbageEra c) = Shelley.MIR (BabbageEra c)
-
-type instance Core.EraRule "NEWEPOCH" (BabbageEra c) = API.NEWEPOCH (BabbageEra c)
-
-type instance Core.EraRule "NEWPP" (BabbageEra c) = Shelley.NEWPP (BabbageEra c)
-
-type instance Core.EraRule "POOL" (BabbageEra c) = API.POOL (BabbageEra c)
-
-type instance Core.EraRule "POOLREAP" (BabbageEra c) = API.POOLREAP (BabbageEra c)
-
-type instance Core.EraRule "PPUP" (BabbageEra c) = API.PPUP (BabbageEra c)
-
-type instance Core.EraRule "RUPD" (BabbageEra c) = Shelley.RUPD (BabbageEra c)
-
-type instance Core.EraRule "SNAP" (BabbageEra c) = Shelley.SNAP (BabbageEra c)
-
-type instance Core.EraRule "TICK" (BabbageEra c) = Shelley.TICK (BabbageEra c)
-
-type instance Core.EraRule "TICKF" (BabbageEra c) = Shelley.TICKF (BabbageEra c)
-
-type instance Core.EraRule "UPEC" (BabbageEra c) = Shelley.UPEC (BabbageEra c)
 
 -- Self-Describing type synomyms
 

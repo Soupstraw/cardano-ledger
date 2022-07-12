@@ -293,7 +293,7 @@ feesOK ::
   Test (UtxoPredicateFailure era)
 feesOK pp tx (UTxO utxo) =
   let txBody = tx ^. bodyTxL
-      collateral = txBody ^. collateralTxBodyL -- Inputs allocated to pay txfee
+      collateral = txBody ^. collateralInputsTxBodyL -- Inputs allocated to pay txfee
       -- restrict Utxo to those inputs we use to pay fees.
       utxoCollateral = eval (collateral ◁ utxo)
       bal = balance @era (UTxO utxoCollateral)
@@ -483,7 +483,7 @@ validateTooManyCollateralInputs pp txBody =
   where
     maxColl, numColl :: Natural
     maxColl = getField @"_maxCollateralInputs" pp
-    numColl = fromIntegral . Set.size $ txBody ^. collateralTxBodyL
+    numColl = fromIntegral . Set.size $ txBody ^. collateralInputsTxBodyL
 
 -- ================================================================
 
@@ -521,7 +521,7 @@ utxoTransition = do
       inputsAndCollateral =
         Set.union
           (txBody ^. inputsTxBodyL)
-          (txBody ^. collateralTxBodyL)
+          (txBody ^. collateralInputsTxBodyL)
 
   {- ininterval slot (txvld txb) -}
   runTest $

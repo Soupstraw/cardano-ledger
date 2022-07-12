@@ -447,7 +447,7 @@ witsVKeyNeeded utxo' tx genDelegs =
       foldr'
         accum
         Set.empty
-        ((txBody ^. inputsTxBodyL) `Set.union` (txBody ^. collateralTxBodyL))
+        ((txBody ^. inputsTxBodyL) `Set.union` (txBody ^. collateralInputsTxBodyL))
       where
         accum txin ans =
           case txinLookup txin utxo' of

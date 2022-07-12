@@ -96,8 +96,6 @@ import Validation (Validation, failureIf, failureUnless)
 
 -- ======================================================
 
-data BabbageUTXO era
-
 -- | Predicate failure for the Babbage Era
 data BabbageUtxoPred era
   = FromAlonzoUtxoFail !(UtxoPredicateFailure era) -- Inherited from Alonzo

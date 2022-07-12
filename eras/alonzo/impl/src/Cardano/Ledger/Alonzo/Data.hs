@@ -34,6 +34,8 @@ module Cardano.Ledger.Alonzo.Data
     -- $
     AlonzoAuxiliaryData (AlonzoAuxiliaryData, AlonzoAuxiliaryData', scripts, txMD),
     AuxiliaryDataHash (..),
+    hashAlonzoAuxiliaryData,
+    validateAlonzoAuxiliaryData,
 
     -- * Deprecated
     AuxiliaryData,

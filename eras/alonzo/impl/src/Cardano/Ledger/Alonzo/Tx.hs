@@ -47,6 +47,7 @@ module Cardano.Ledger.Alonzo.Tx
     witsAlonzoTxL,
     auxDataAlonzoTxL,
     sizeAlonzoTxG,
+    isValidAlonzoTxL,
     txdats',
     txscripts',
     txrdmrs,

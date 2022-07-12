@@ -259,8 +259,6 @@ validateScriptsWellFormed pp tx =
 -- The tests are very generic and reusable, but the transition
 -- function is very specific to the Babbage Era.
 
-data BabbageUTXOW era
-
 -- | A very specialized transitionRule function for the Babbage Era.
 babbageUtxowTransition ::
   forall era.

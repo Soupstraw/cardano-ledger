@@ -72,8 +72,6 @@ type ConcreteBabbage era =
     Core.Witnesses era ~ TxWitness era
   )
 
-data BabbageUTXOS era
-
 instance
   forall era.
   ( Era era,

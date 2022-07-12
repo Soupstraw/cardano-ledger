@@ -53,7 +53,6 @@ import Control.State.Transition
 import Data.Sequence (Seq)
 
 -- ==================================================
-data BabbageLEDGER c
 
 instance
   ( Era era,
