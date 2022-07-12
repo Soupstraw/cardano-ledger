@@ -51,11 +51,12 @@ import Cardano.Binary
     peekTokenType,
     withSlice,
   )
+import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), validScript)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import Cardano.Ledger.Core hiding (AuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -344,10 +345,23 @@ type AuxiliaryData era = AlonzoAuxiliaryData era
 
 instance CC.Crypto c => EraAuxiliaryData (AlonzoEra c) where
   type AuxiliaryData (AlonzoEra c) = AlonzoAuxiliaryData (AlonzoEra c)
-  hashAuxiliaryData x = AuxiliaryDataHash (hashAnnotated x)
-  validateAuxiliaryData pv (AlonzoAuxiliaryData metadata scrips) =
-    all validMetadatum metadata
-      && all (validScript pv) scrips
+  hashAuxiliaryData = hashAlonzoAuxiliaryData
+  validateAuxiliaryData = validateAlonzoAuxiliaryData
+
+hashAlonzoAuxiliaryData ::
+  (HashAlgorithm (CC.HASH crypto), HashAnnotated x EraIndependentAuxiliaryData crypto) =>
+  x ->
+  AuxiliaryDataHash crypto
+hashAlonzoAuxiliaryData x = AuxiliaryDataHash (hashAnnotated x)
+
+validateAlonzoAuxiliaryData ::
+  (Era era, ToCBOR (Script era), Script era ~ AlonzoScript era) =>
+  ProtVer ->
+  AuxiliaryData era ->
+  Bool
+validateAlonzoAuxiliaryData pv (AlonzoAuxiliaryData metadata scrips) =
+  all validMetadatum metadata
+    && all (validScript pv) scrips
 
 instance (Crypto era ~ c) => HashAnnotated (AuxiliaryData era) EraIndependentAuxiliaryData c
 

@@ -56,10 +56,7 @@ type instance PreviousEra (AlonzoEra c) = MaryEra c
 
 type instance TranslationContext (AlonzoEra c) = AlonzoGenesis
 
-instance
-  (Crypto c) =>
-  TranslateEra (AlonzoEra c) NewEpochState
-  where
+instance Crypto c => TranslateEra (AlonzoEra c) NewEpochState where
   translateEra ctxt nes =
     return $
       NewEpochState

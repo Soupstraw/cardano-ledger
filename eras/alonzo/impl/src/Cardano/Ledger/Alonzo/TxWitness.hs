@@ -38,7 +38,7 @@ module Cardano.Ledger.Alonzo.TxWitness
         txdats',
         txrdmrs'
       ),
-    AlonzoEraWitnesses(..),
+    AlonzoEraWitnesses (..),
     unTxDats,
     nullDats,
   )
@@ -76,7 +76,6 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics
-import GHC.Records
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
@@ -368,7 +367,7 @@ instance CC.Crypto c => EraWitnesses (AlonzoEra c) where
 
 class EraWitnesses era => AlonzoEraWitnesses era where
   datsWitsL :: Lens' (Witnesses era) (TxDats era)
-  
+
   rdmrsWitsL :: Lens' (Witnesses era) (Redeemers era)
 
 instance CC.Crypto c => AlonzoEraWitnesses (AlonzoEra c) where
@@ -377,25 +376,6 @@ instance CC.Crypto c => AlonzoEraWitnesses (AlonzoEra c) where
 
   rdmrsWitsL =
     lensWitsRaw _txrdmrs (\witsRaw rdmrsWits -> witsRaw {_txrdmrs = rdmrsWits})
-
-
-instance HasField "txdats" (TxWitness era) (TxDats era) where
-  getField (TxWitnessConstr (Memo (TxWitnessRaw _ _ _ d _) _)) = d
-
-instance HasField "txrdmrs" (TxWitness era) (Redeemers era) where
-  getField (TxWitnessConstr (Memo (TxWitnessRaw _ _ _ _ r) _)) = r
-
-instance
-  (Crypto era ~ crypto) =>
-  HasField "addrWits" (TxWitness era) (Set (WitVKey 'Witness crypto))
-  where
-  getField (TxWitnessConstr (Memo (TxWitnessRaw w _ _ _ _) _)) = w
-
-instance
-  (Core.Script era ~ script, Crypto era ~ crypto) =>
-  HasField "scriptWits" (TxWitness era) (Map (ScriptHash crypto) script)
-  where
-  getField (TxWitnessConstr (Memo (TxWitnessRaw _ _ s _ _) _)) = s
 
 --------------------------------------------------------------------------------
 -- Serialisation
