@@ -115,6 +115,7 @@ instance Val Coin where
   isAdaOnlyCompact _ = True
   coinCompact = id
   injectCompact = id
+  modifyCompactCoin = ($)
 
 instance Val DeltaCoin where
   n <×> (DeltaCoin x) = DeltaCoin $ fromIntegral n * x
@@ -127,6 +128,9 @@ instance Val DeltaCoin where
   isAdaOnlyCompact _ = True
   coinCompact (CompactDeltaCoin cc) = CompactCoin cc
   injectCompact (CompactCoin cc) = CompactDeltaCoin cc
+  modifyCompactCoin f (CompactDeltaCoin cc) =
+    case f (CompactCoin cc) of
+      CompactCoin cc' -> CompactDeltaCoin cc'
 
 -- =============================================================
 
