@@ -101,7 +101,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Maybe.Strict (StrictMaybe, strictMaybeToMaybe)
-import Data.MemoBytes (Mem, MemoBytes (Memo), memoBytes)
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes (Memo), memoBytesFromEncoding, mkMemoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -110,6 +110,7 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
+import qualified Data.ByteString.Lazy as LBS
 
 -- ========================================================
 
@@ -151,7 +152,7 @@ instance
   ) =>
   NoThunks (TxRaw era)
 
-newtype Tx era = TxConstr (MemoBytes (TxRaw era))
+newtype Tx era = TxConstr (MemoBytes TxRaw era)
   deriving newtype (SafeToHash, ToCBOR)
 
 deriving newtype instance
@@ -200,7 +201,7 @@ pattern Tx {body, wits, auxiliaryData} <-
         _
       )
   where
-    Tx b w a = TxConstr $ memoBytes (encodeTxRaw $ TxRaw b w a)
+    Tx b w a = TxConstr $ memoBytesFromEncoding (encodeTxRaw $ TxRaw b w a)
 
 {-# COMPLETE Tx #-}
 
@@ -262,7 +263,7 @@ instance
           )
 
 deriving via
-  Mem (TxRaw era)
+  Mem TxRaw era
   instance
     ( Era era,
       FromCBOR (Annotator (Core.TxBody era)),
@@ -280,12 +281,13 @@ deriving via
 --
 --   The only intended use case for this is for segregated witness.
 unsafeConstructTxWithBytes ::
+  Era era =>
   Core.TxBody era ->
   Core.Witnesses era ->
   StrictMaybe (Core.AuxiliaryData era) ->
-  SBS.ShortByteString ->
+  LBS.ByteString ->
   Tx era
-unsafeConstructTxWithBytes b w a bytes = TxConstr (Memo (TxRaw b w a) bytes)
+unsafeConstructTxWithBytes b w a bytes = TxConstr (mkMemoBytes (TxRaw b w a) bytes)
 
 --------------------------------------------------------------------------------
 -- Witnessing
@@ -436,8 +438,7 @@ instance
 segwitTx ::
   ( ToCBOR (Core.TxBody era),
     ToCBOR (Core.Witnesses era),
-    ToCBOR (Core.AuxiliaryData era)
-  ) =>
+    ToCBOR (Core.AuxiliaryData era), Era era) =>
   Annotator (Core.TxBody era) ->
   Annotator (Core.Witnesses era) ->
   Maybe (Annotator (Core.AuxiliaryData era)) ->
@@ -461,7 +462,7 @@ segwitTx
           body'
           witnessSet
           (maybeToStrictMaybe metadata)
-          (SBS.toShort . BSL.toStrict $ fullBytes)
+          fullBytes
 
 instance
   ( Typeable era,
@@ -543,9 +544,9 @@ hashMultiSigScript = hashScript @era
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
 -- key hashes that signed the transaction to be validated.
 evalNativeMultiSigScript ::
-  CC.Crypto crypto =>
-  MultiSig crypto ->
-  Set (KeyHash 'Witness crypto) ->
+  Era era =>
+  MultiSig era ->
+  Set (KeyHash 'Witness (Crypto era)) ->
   Bool
 evalNativeMultiSigScript (RequireSignature hk) vhks = Set.member hk vhks
 evalNativeMultiSigScript (RequireAllOf msigs) vhks =
@@ -558,7 +559,7 @@ evalNativeMultiSigScript (RequireMOf m msigs) vhks =
 -- | Script validator for native multi-signature scheme.
 validateNativeMultiSigScript ::
   (TransTx ToCBOR era, Core.Witnesses era ~ WitnessSet era) =>
-  MultiSig (Crypto era) ->
+  MultiSig era ->
   Tx era ->
   Bool
 validateNativeMultiSigScript msig tx =

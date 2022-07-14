@@ -1,14 +1,10 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -227,7 +223,7 @@ constructMetadata n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n - 1])
 -- | Decode a TxSeq, used in decoding a Block.
 txSeqDecoder ::
   forall era.
-  BlockAnn era =>
+  (BlockAnn era, Era era) =>
   Bool ->
   forall s. Decoder s (Annotator (TxSeq era))
 txSeqDecoder lax = do
@@ -261,7 +257,7 @@ txSeqDecoder lax = do
   pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
 
 instance
-  (BlockAnn era, Typeable era) =>
+  (Era era, BlockAnn era, Typeable era) =>
   FromCBOR (Annotator (TxSeq era))
   where
   fromCBOR = txSeqDecoder False

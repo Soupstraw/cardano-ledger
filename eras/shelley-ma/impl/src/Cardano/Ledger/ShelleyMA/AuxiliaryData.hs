@@ -38,7 +38,7 @@ import Codec.CBOR.Decoding
 import Control.DeepSeq
 import Data.Coders
 import Data.Map.Strict (Map)
-import Data.MemoBytes
+import Cardano.Ledger.MemoBytes
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)

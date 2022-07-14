@@ -57,6 +57,7 @@ library
     Cardano.Ledger.HKD
     Cardano.Ledger.Keys
     Cardano.Ledger.Keys.WitVKey
+    Cardano.Ledger.MemoBytes
     Cardano.Ledger.PoolDistr
     Cardano.Ledger.Rules.ValidationMode
     Cardano.Ledger.SafeHash
@@ -79,6 +80,7 @@ library
     cardano-ledger-byron,
     cardano-prelude,
     cardano-slotting,
+    cborg,
     containers,
     data-default-class,
     deepseq,

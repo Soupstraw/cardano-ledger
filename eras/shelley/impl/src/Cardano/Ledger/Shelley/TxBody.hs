@@ -132,7 +132,6 @@ import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
-import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -144,6 +143,7 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
+import Cardano.Ledger.MemoBytes (MemoBytes (Memo), Mem, memoBytesFromEncoding)
 
 -- ========================================================================
 
@@ -366,7 +366,7 @@ instance
 -- ====================================================
 -- Introduce TxBody as a newtype around a MemoBytes
 
-newtype TxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
+newtype TxBody era = TxBodyConstr (MemoBytes TxBodyRaw era)
   deriving (Generic, Typeable)
   deriving newtype (SafeToHash)
 
@@ -382,7 +382,7 @@ deriving instance (Era era, TransTxBody Show era) => Show (TxBody era)
 deriving instance (Era era, TransTxBody Eq era) => Eq (TxBody era)
 
 deriving via
-  (Mem (TxBodyRaw era))
+  (Mem TxBodyRaw era)
   instance
     ( Era era,
       FromCBOR (Core.TxOut era),
@@ -420,7 +420,7 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
       )
   where
     TxBody _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash =
-      TxBodyConstr $ memoBytes (txSparse (TxBodyRaw _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash))
+      TxBodyConstr $ memoBytesFromEncoding (txSparse (TxBodyRaw _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash))
 
 {-# COMPLETE TxBody #-}
 

@@ -68,7 +68,7 @@ import Data.Coders
     (<!),
     (<*!),
   )
-import Data.MemoBytes
+import Cardano.Ledger.MemoBytes
   ( Mem,
     MemoBytes (..),
     memoBytes,

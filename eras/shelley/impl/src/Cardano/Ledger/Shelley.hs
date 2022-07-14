@@ -92,7 +92,7 @@ type instance Core.TxBody (ShelleyEra c) = STx.TxBody (ShelleyEra c)
 
 type instance Core.TxOut (ShelleyEra c) = STx.TxOut (ShelleyEra c)
 
-type instance Core.Script (ShelleyEra c) = MultiSig c
+type instance Core.Script (ShelleyEra c) = MultiSig (ShelleyEra c)
 
 type instance Core.AuxiliaryData (ShelleyEra c) = Metadata (ShelleyEra c)
 

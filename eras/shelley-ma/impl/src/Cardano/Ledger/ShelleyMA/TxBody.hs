@@ -86,7 +86,7 @@ import Data.Coders
     (!>),
   )
 import qualified Data.Map.Strict as Map
-import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Set (Set, empty)
 import Data.Typeable (Typeable)
