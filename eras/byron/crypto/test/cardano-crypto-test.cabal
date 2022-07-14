@@ -10,6 +10,8 @@ maintainer:          operations@iohk.io
 copyright:           2018 IOHK
 category:            Currency
 build-type:          Simple
+extra-source-files:  golden/VerificationKey
+                     golden/SigningKey
 
 common base
   build-depends:      base >= 4.12 && < 4.15
