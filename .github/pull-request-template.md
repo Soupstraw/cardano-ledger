@@ -21,5 +21,5 @@ For more guidelines, see: https://keepachangelog.com/en/1.0.0/
 -->
 
  - Added: <!-- Description of the feature -->
- - Changed: <!-- Description of what changed --->
+ - Changed: <!-- Description of what changed -->
    <!-- etc. -->
